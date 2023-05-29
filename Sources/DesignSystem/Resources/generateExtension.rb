@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'find'
+
 class Log
     def self.logStartMethod(str)
         puts ">>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -29,7 +31,7 @@ class GenerateExtend
         
         @resultStr = "import " + classImport
         @resultStr << "\n\n"
-        @resultStr << "extension " + classExtend + " {"
+        @resultStr << "public extension " + classExtend + " {"
         
         newLine("enum " + classEnumName + " {")
         @tabulationIndex += 1
@@ -62,11 +64,31 @@ class GenerateExtend
         Log.logInMethod("Create file: " + @pathUIColorFile)
 	end
 
+    def findDirectories(path)
+        dirNames = []
+        Find.find(path) do |current|
+            currentName = current.gsub(path, "")
+            if File.directory?(current) && currentName.include?('.') && currentName[0] != "."
+                dirNames << File.basename(current)
+            end
+        end
+        dirNames
+    end
+    
 	def generateData()
 		# Generate a array with all colors & merge same key
-		Dir.new(@pathColor).each do |file|
+        # Récupère tous les fichiers du répertoire et des sous-répertoires
+        all_files = findDirectories(@pathColor)
+
+        all_files.each do |file|
+            
+            Log.logInMethod("file : " + file)
+            
 			colorName = file.clone.split(/(\.)/, 2).first
-			colorData = colorName.split("_")
+            colorExtension = file.clone.split(/(\.)/, 2).last
+            next if colorExtension == "json"
+            
+            colorData = colorName.split("_")
 			
 			temp = @result
 
@@ -107,12 +129,15 @@ class GenerateExtend
 	end
 
 	def valueToText(currentHash)
+        keyTemp = []
+        
 		currentHash.each do |key, value|
 			if value.is_a? String
                 # If the value is a String, we add a new variable
                 valueStr = @classInit.clone
                 valueStr.gsub! '{value}', value
-                newLine("static var " + key + " = " + valueStr)
+                newLine("public static var " + key + " = " + valueStr)
+                keyTemp << key
 			else
                 # If the value is a Hash, we add a new Enum
 				newLine("enum " + key.capitalize() + " {")
@@ -123,5 +148,24 @@ class GenerateExtend
 				newLine("}")
 			end
 		end
+        
+        newLine("public static func all() -> [#{@classExtend}] {")
+        @tabulationIndex += 1
+        newLine("[")
+        @tabulationIndex += 1
+        
+        keyOrdered = keyTemp.sort()
+
+        keyOrdered.each_with_index do |item, index|
+            if index < keyTemp.count
+                newLine(item + ",")
+            else
+                newLine(item)
+            end
+        end
+        @tabulationIndex -= 1
+        newLine("]")
+        @tabulationIndex -= 1
+        newLine("}")
 	end
 end

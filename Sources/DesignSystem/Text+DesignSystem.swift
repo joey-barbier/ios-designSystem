@@ -12,7 +12,7 @@ public extension View {
         self
             .font(.custom(style.fontName, size: style.size))
             .multilineTextAlignment(style.alignment)
-            .lineSpacing(style.size - style.lineHeight)
+            .lineSpacing(style.lineHeight - style.size)
     }
     
     @ViewBuilder
